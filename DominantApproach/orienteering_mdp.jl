@@ -1,7 +1,7 @@
 # in Julia, standard arrays are indexed starting from one
 # for us, in some cases it is more convinient to start indexing from zero
 # this is why we use package OffsetArrays
-# OrderedCollections is to be able to use the orderded set data structure 
+# OrderedCollections is to be able to use the orderded set data structure
 # (to make the code deterministic so that two runs have exaclty the same result )
 using OffsetArrays, OrderedCollections, LinearAlgebra, Pickle, DataFrames, CSV, IterTools, Match, Combinatorics
 
@@ -31,8 +31,9 @@ global cur_label_id
 global max_num_scenarios = 5
 
 
-for num_scenarios in 1:5
-
+for num_scenarios in 1:8
+# for EXPERIEMENT_NAME in ["30_300", "30_600", "30_900", "30_1200", "30_1500"]
+# num_scenarios = 1
 Triple = @match num_scenarios begin
     1 => Tuple{Int64}
     2 => Tuple{Int64, Int64}
@@ -49,23 +50,23 @@ start_time = time()
 # Scenario structure
 
 
-# the data consists of 
+# the data consists of
 # - a number of points with ids from 1 to num_points
 # - the depot (starting and finished point) has id 0
 # - distance matrix between point (indexing starts from 0)
-# - matrix of scenarios for all (non-depot) points 
+# - matrix of scenarios for all (non-depot) points
 #   each point has three scenarios
 #   scenarios for the same point should be sorted by non-increasing of the time
-    
+
 
 # data for the instance with three (non-depot) points
 
 
 # a = Pickle.load("times_2.pkl")
-# a = convert(Vector{Vector{Vector{Float64}}}, a) 
+# a = convert(Vector{Vector{Vector{Float64}}}, a)
 # println(a)
 # num_points = 19
-# distance = rand(Float64, (num_points + 1, num_points + 1)) 
+# distance = rand(Float64, (num_points + 1, num_points + 1))
 # distance = distance' * distance * 0.5
 # distance[diagind(distance)] .= 0
 # distance = OffsetArray(distance, 0:num_points, 0 : num_points)
@@ -76,17 +77,28 @@ start_time = time()
 # scenarios = [[Scenario(1 / 3, possible_times[i], profits[point]) for i=1:3] for point in 1:num_points]
 
 
-times_distribution = Pickle.load("times_$num_scenarios.pkl")
-times_distribution = convert(Vector{Vector{Vector{Float64}}}, times_distribution) 
+# times_distribution = Pickle.load("OP-Stochastic\\DominantApproach\\data\\testing\\times_$EXPERIEMENT_NAME.pkl")
+times_distribution = Pickle.load("data\\real\\new\\new_times_$num_scenarios.pkl")
 
-distance = Pickle.load("travel_matrix.pkl")
-distance = convert(Vector{Vector{Float64}}, distance) 
+times_distribution = convert(Vector{Vector{Vector{Float64}}}, times_distribution)
+
+# distance = Pickle.load("OP-Stochastic\\DominantApproach\\data\\testing\\travel_matrix_$EXPERIEMENT_NAME.pkl")
+distance = Pickle.load("data\\real\\travel_matrix.pkl")
+
+distance = convert(Vector{Vector{Float64}}, distance)
 num_points=size(distance, 1) -1
 distance = mapreduce(permutedims, vcat, distance)
 distance = OffsetArray(distance, 0:num_points, 0 : num_points)
+# profits = Pickle.load("OP-Stochastic\\DominantApproach\\data\\testing\\profits_$EXPERIEMENT_NAME.pkl")
+profits = Pickle.load("data\\real\\profits.pkl")
 
-profits = Pickle.load("profits.pkl")
-profits = convert(Vector{Float64}, profits) 
+profits = convert(Vector{Float64}, profits)
+
+println(distance[1])
+println(distance[2])
+println(distance[1, 2])
+
+
 
 scenarios = [[Scenario(times_distribution[point][i][2], times_distribution[point][i][1], profits[point]) for i=1:num_scenarios] for point in 2:num_points+1]
 # scenarios = Scenario[]
@@ -96,17 +108,17 @@ scenarios = [[Scenario(times_distribution[point][i][2], times_distribution[point
 #     profit = rand(1:4)
 #     new_scenario = [Scenario(1 / 3, possible_times[i], profit) for i=1:3]
 #     append!(scenarios, new_scenario)
-    
+
 # end
 # scenarios = reshape(scenarios, (num_points,3))
 
 # num_points = 3
-# distance = OffsetArray(Int64[0 2 3 4; 
-#                              2 0 2 4; 
-#                              3 2 0 1; 
-#                              4 4 1 0], 
+# distance = OffsetArray(Int64[0 2 3 4;
+#                              2 0 2 4;
+#                              3 2 0 1;
+#                              4 4 1 0],
 #                        0:num_points, 0:num_points)
-# scenarios = Scenario[Scenario(0.5, 4, 10) Scenario(0.4, 2, 3) Scenario(0.1, 0, 0); 
+# scenarios = Scenario[Scenario(0.5, 4, 10) Scenario(0.4, 2, 3) Scenario(0.1, 0, 0);
 #                      Scenario(0.7, 3, 7)  Scenario(0.1, 2, 4) Scenario(0.2, 1, 1);
 #                      Scenario(0.3, 5, 11) Scenario(0.6, 2, 4) Scenario(0.1, 0, 0)]
 
@@ -114,13 +126,13 @@ scenarios = [[Scenario(times_distribution[point][i][2], times_distribution[point
 # data for the instance with four (non-depot) points
 
 # num_points = 4
-# distance = OffsetArray(Int64[0 2 3 4 3; 
-#                              2 0 2 4 1; 
-#                              3 2 0 1 1; 
+# distance = OffsetArray(Int64[0 2 3 4 3;
+#                              2 0 2 4 1;
+#                              3 2 0 1 1;
 #                              4 4 1 0 2;
-#                              3 1 1 2 0], 
+#                              3 1 1 2 0],
 #                         0:num_points, 0:num_points)
-# scenarios = Scenario[Scenario(0.5, 4, 10) Scenario(0.4, 2, 3) Scenario(0.1, 0, 0); 
+# scenarios = Scenario[Scenario(0.5, 4, 10) Scenario(0.4, 2, 3) Scenario(0.1, 0, 0);
 #                      Scenario(0.7, 3, 7)  Scenario(0.1, 2, 4) Scenario(0.2, 1, 1);
 #                      Scenario(0.3, 5, 11) Scenario(0.6, 2, 4) Scenario(0.1, 0, 0);
 #                      Scenario(0.4, 4, 8)  Scenario(0.4, 3, 6)  Scenario(0.2, 1, 2)]
@@ -142,12 +154,14 @@ function check_time(labels::Vector{Label})::Bool
 end
 
 TO_PRINT_LABELS = false
+RESULT_PRINT = true
 insert_and_dedup!(v::Vector{Label}, x::Label) = (splice!(v, searchsorted(map(x -> x.id, v), x.id), [x]); v)
 
 # const Triple = Tuple{Int64, Int64, Int64, Int64, Int64}
 
 
 horizon_length = 120
+# horizon_length = parse(Int64, EXPERIEMENT_NAME[4:end])
 init_label = Label(0, 0, horizon_length, 0.0, [], [])
 global cur_label_id = 1
 
@@ -171,12 +185,12 @@ global best_profit = -Inf64
 function extend_labels(labels::Vector{Label},  to_point::Int64)
 
     point = labels[1].point
-    # first we should find the time of the extended label 
-    # for this, we sort labels in the descending order of their time 
+    # first we should find the time of the extended label
+    # for this, we sort labels in the descending order of their time
     prev_states = labels
     # visited_points = []
     visited_points = unique!(vcat(vcat(map(x -> x.visited_points, prev_states)...), [to_point]))
-    sort!(prev_states, by = x -> x.time, rev = true)
+    sort!(prev_states, by = x -> x.time)
     # we find the maximum time of the extended label
     # which is equal to min_i{label_i.time - scenarios[point][i].time}
     time = minimum([prev_states[i].time - distance[point, to_point] - scenarios[point][i].time for i=1:num_scenarios])
@@ -193,6 +207,7 @@ function dominates(label1::Label, label2::Label)::Bool
     label1.profit < label2.profit && return false
     label1.time > label2.time && return true
     label1.profit > label2.profit && return true
+
     return label1.id < label2.id
 end
 
@@ -206,12 +221,12 @@ function print_non_dominated_label_ids()
     end
 end
 
-# we loop over the set of non-dominated labels until all triples of labels are extended 
+# we loop over the set of non-dominated labels until all triples of labels are extended
 global new_labels_were_generated = true
 global number_labels_generated = 0
 global num_extensions = 0
-while new_labels_were_generated 
-    global new_labels_were_generated = false    
+while new_labels_were_generated
+    global new_labels_were_generated = false
     global number_labels_generated = 0
     for point in 1:num_points
         println("point ", point)
@@ -221,11 +236,11 @@ while new_labels_were_generated
         #     # add = if length(non_dom_labels[point]) < 3 0 else 1 end
         #     for (idx2, label2) in enumerate(non_dom_labels[point][idx1+add:end])
         #         # add = if length(non_dom_labels[point]) < 2 0 else 1 end
-        #         for (idx3, label3) in enumerate(non_dom_labels[point][idx2+add:end])   
-    
-        for labels in with_replacement_combinations(non_dom_labels[point], num_scenarios)    
-            # println(labels)        
-            if !(map(label -> label.id, labels) in extended_triples[point]) #&& check_time([label1, label2, label3]) # label1.id <= label2.id <= label3.id <= label4.id <= label5.id && 
+        #         for (idx3, label3) in enumerate(non_dom_labels[point][idx2+add:end])
+
+        for labels in with_replacement_combinations(non_dom_labels[point], num_scenarios)
+            # println(labels)
+            if !(map(label -> label.id, labels) in extended_triples[point]) #&& check_time([label1, label2, label3]) # label1.id <= label2.id <= label3.id <= label4.id <= label5.id &&
                 # this triple has not yet been extended, we now extend it
                 for to_point in 0:num_points
                     if to_point in mapreduce(label -> label.visited_points, vcat, labels)
@@ -237,34 +252,35 @@ while new_labels_were_generated
                     # if to_point in label3.visited_points
                     #     continue
                     # end
-                
+
                     if to_point != point
                         push!(extended_triples[point], Tuple(map(label -> label.id, labels)))
                         global num_extensions += 1
 
-                        new_label = extend_labels(labels, to_point)                       
+                        new_label = extend_labels(labels, to_point)
 
                         #if the new label is not returned, it means that extension is not feasible
                         new_label === nothing && continue
 
-                        if to_point == 0 
+                        if to_point == 0
                             #if we come back to the depot we just check whether the new solution is the best one
                             if (new_label.profit > best_profit)
                                 global best_profit = new_label.profit
                                 global best_label = new_label
-                                TO_PRINT_LABELS && println("Extension (", label1.id, ",", label2.id, ",", label3.id,  ") -> (t=", 
+                                TO_PRINT_LABELS && println("Extension (", label1.id, ",", label2.id, ",", label3.id,  ") -> (t=",
                                                         new_label.time, ",", "prf=", new_label.profit, "visited points=", new_label.visited_points, ") : new best solution")
-                            end    
+                                # print(best_label)
+                            end
                             continue
                         else
-                            #if we are in an intermediate point, we check whether the new label is dominated    
+                            #if we are in an intermediate point, we check whether the new label is dominated
                             new_label_is_dominated = false
                             for ex_label in non_dom_labels[to_point]
-                                if dominates(ex_label, new_label) 
+                                if dominates(ex_label, new_label)
                                     new_label_is_dominated = true
                                     break
                                 end
-                            end    
+                            end
                             #if it is dominated, we do not keep it
                             new_label_is_dominated && continue
                         end
@@ -274,7 +290,7 @@ while new_labels_were_generated
                         # at this point we know that the new label is non-dominated
                         # we now check whether the new label dominates other labels
                         for ex_label in non_dom_labels[to_point]
-                            if dominates(new_label, ex_label) 
+                            if dominates(new_label, ex_label)
                                 # we delete dominated labels
                                 push!(dom_label_ids, ex_label.id)
                                 filter!(x -> x.id != ex_label.id, non_dom_labels[to_point])
@@ -288,13 +304,13 @@ while new_labels_were_generated
                         global new_labels_were_generated = true
                         global number_labels_generated += 1
 
-                        TO_PRINT_LABELS && print("Extension (", label1.id, ",", label2.id, ",", label3.id, ") -> (p=", to_point, 
+                        TO_PRINT_LABELS && print("Extension (", label1.id, ",", label2.id, ",", label3.id, ") -> (p=", to_point,
                                                 ",t=", new_label.time, ",", "prf=", new_label.profit, ",id=", new_label.id, "visited points=", new_label.visited_points, ")")
-                        
+
                         if TO_PRINT_LABELS && !isempty(dom_label_ids)
                             print(", dominates labels")
                             for id in dom_label_ids
-                                print(" ", id)    
+                                print(" ", id)
                             end
                         end
 
@@ -303,14 +319,14 @@ while new_labels_were_generated
                         #     print_non_dominated_label_ids()
                         # end
                     end
-                        
+
                 end
             end
                 # end
             # end
         end
     end
-    println(number_labels_generated)
+    RESULT_PRINT && println(number_labels_generated)
 end
 
 #we now print the solution stored in the best label
@@ -335,32 +351,58 @@ function get_paths_dict(label::Label)
     return paths_dict
 end
 
-println("Best solution with profit : ", best_profit)
+function get_only_path(label :: Label)
+    cur_label = label
+    path = []
+    while length(cur_label.prev_states) > 0
+        append!(path, cur_label.point)
+        cur_label = cur_label.prev_states[1]
+    end
+    return path
+end
+
+
+
+RESULT_PRINT && println("Best solution with profit : ", best_profit)
 global some_path
+# global best_label
+# println("BEST LABEL")
+# println(length(best_label.prev_states))
+# println(best_label)
 for (k, (path, prob)) in enumerate(get_paths_dict(best_label))
     print("Path 0")
     for index in length(path):-1:1
         print(" -> ", path[index])
     end
-    Pickle.store("julia_path_$(num_scenarios)_$k", path)
-    Pickle.store("julia_prob_$(num_scenarios)_$k", prob)
+
+    Pickle.store("results\\real\\new_julia_path_$num_scenarios", path)
+    Pickle.store("results\\real\\new_julia_prob_$num_scenarios", prob)
     global some_path = path
     println(" with probability ", prob)
 end
-println(some_path)
-println("Number of extensions is ", num_extensions)
+# best_path = get_only_path(best_label)
+# RESULT_PRINT && print("Path 0")
+# for index in length(best_path):-1:1
+#     RESULT_PRINT && print(" -> ", best_path[index])
+# end
+
+# Pickle.store("results\\real\\julia_path_$num_scenarios", best_path)
+# global some_path = best_path
+# end
+# RESULT_PRINT && println(some_path)
+RESULT_PRINT && println("Number of extensions is ", num_extensions)
 global sum_non_dom_labels = 0
 for point in 1:num_points
     global sum_non_dom_labels += length(non_dom_labels[point])
 end
-println("Number of created labels is ", cur_label_id)
-println("Number of non-dominated labels is ", sum_non_dom_labels)
+RESULT_PRINT && println("Number of created labels is ", cur_label_id)
+RESULT_PRINT && println("Number of non-dominated labels is ", sum_non_dom_labels)
 
 
 if num_scenarios == 1
     global some_path = reverse(best_label.visited_points)
 end
-println(some_path)
+RESULT_PRINT && println(some_path)
 taken_time = time() - start_time
 push!(best_profits, best_profit)
 push!(taken_times, taken_time)
@@ -373,10 +415,11 @@ expected_duration = sum([sum([scenarios[point][i].prob * scenarios[point][i].tim
 push!(expected_durations, expected_duration)
 
 end
-# max_num_scenarios = 1
+max_num_scenarios = 3
 df = DataFrame(Algorithm = ["Julia" for i in 1:max_num_scenarios],
             Alpha = [0 for i in 1:max_num_scenarios],
                Number_scenarios = 1:max_num_scenarios,
+            #    T_max = [300, 600, 900, 1200, 1500],
                goal = best_profits,
                taken_time = taken_times,
                violation_probability = [0 for i in 1:max_num_scenarios],
@@ -384,5 +427,4 @@ df = DataFrame(Algorithm = ["Julia" for i in 1:max_num_scenarios],
                is_feasible = [1 for i in 1:max_num_scenarios]
                )
 
-CSV.write("results_julia.csv", df, delim=';')
-
+# CSV.write("results\\real\\new_results_julia.csv", df, delim=';')

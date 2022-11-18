@@ -8,44 +8,64 @@ from Heuristic import *
 import pickle 
 
 result_data = []
+def read_data(EXPERIMENT_NAME):
+    with open(f'..\\..\\experiments\\data\\times_{EXPERIMENT_NAME}.pkl', 'rb') as times_f, \
+            open(f'..\\..\\experiments\\data\\profits_{EXPERIMENT_NAME}.pkl', 'rb') as profits_f, \
+            open(f'..\\..\\experiments\\data\\travel_matrix_{EXPERIMENT_NAME}.pkl', 'rb') as travel_matrix_f:
+        profits = pickle.load(profits_f)
+        times_distribution = pickle.load(times_f)
+        travel_matrix = pickle.load(travel_matrix_f)
+        cost_matrix = np.zeros((len(profits), len(profits)))
+    return profits, cost_matrix, travel_matrix, times_distribution
+# for alpha in (1e-5, 0.05):
 
-for alpha in (1e-5, 0.05):
+# for number_scenarios in range(1, 9):
+for L in (300, 600, 900, 1200, 1500):
+    for number_scenarios in (1, 2, 3, 4):
+    # for EXPERIEMENT_NAME in [f'20_{x}_{y}' for x in (300, 600, 900, 1200, 1500) for y in (1, 2, 3, 4)]:
+    # profits, cost_matrix, travel_matrix, times_distribution = read_input(number_scenarios, 20, 5)
+        EXPERIMENT_NAME = f'20_{L}_{number_scenarios}'
+        print(EXPERIMENT_NAME)
 
-    for number_scenarios in range(1, 9):
-        profits, cost_matrix, travel_matrix, times_distribution = read_input(number_scenarios, 20, 5)
-        np.savetxt('profits.txt', profits)
-        np.savetxt('travel_matrix.txt', travel_matrix)
+        profits, cost_matrix, travel_matrix, times_distribution = read_data(EXPERIMENT_NAME)
+        # np.savetxt('profits.txt', profits)
 
-        with open("../DominantApproach/profits.pkl","wb") as f:
-            pickle.dump([float(p) for p in profits],f)
-        with open(f'../DominantApproach/times_distribution_{number_scenarios}.pkl', 'wb') as f:
-            pickle.dump(times_distribution,f)   
-        with open(f'../DominantApproach/travel_matrix.pkl', 'wb') as f:
-            pickle.dump([[float(travel_matrix[i][j]) for i in range(len(travel_matrix))] for j in range(len(travel_matrix))],f)
-            
+        # np.savetxt('travel_matrix.txt', travel_matrix)
+
+        # with open("../DominantApproach/profits.pkl","wb") as f:
+        #     pickle.dump([float(p) for p in profits],f)
+        # with open(f'../DominantApproach/times_distribution_{number_scenarios}.pkl', 'wb') as f:
+        #     pickle.dump(times_distribution,f)
+        # with open(f'../DominantApproach/travel_matrix.pkl', 'wb') as f:
+        #     pickle.dump([[float(travel_matrix[i][j]) for i in range(len(travel_matrix))] for j in range(len(travel_matrix))],f)
+
 
         # print(list(map(len, times_distribution)))
         # np.savetxt('times_distribution.txt', times_distribution)
         expected_times = calculate_expectations(times_distribution)
-        L = 120
+        # L = 120
+        # L = int(EXPERIEMENT_NAME[3:])
+        alpha = 5e-2
+        # number_scenarios = int(EXPERIEMENT_NAME[-1])
+        print(L)
         num_samples = 1000
-        path, taken_time, goal, violation_prob, expected_duration = calculate_path(profits, 
-                                                                                    cost_matrix, 
-                                                                                    travel_matrix, 
+        path, taken_time, goal, violation_prob, expected_duration = calculate_path(profits,
+                                                                                    cost_matrix,
+                                                                                    travel_matrix,
                                                                                     times_distribution,
                                                                                     expected_times,
-                                                                                    L, alpha, 'empiric', 
+                                                                                    L, alpha, 'empiric',
                                                                                     num_samples)
         is_feasible = sum([max(times_distribution[node], key = lambda x: x[0])[0] for node in path]) + sum([travel_matrix[node][next_node] for node, next_node in zip(path[:-1],path[1:])]) <= L
-        with open(f'../DominantApproach/path_{number_scenarios}.pkl', 'wb') as f:
+        with open(f'..\\..\\experiments\\results\\Heuristics\\path_{EXPERIMENT_NAME}.pkl', 'wb') as f:
             pickle.dump(path,f)
         result_data.append(['Heuristic', alpha, number_scenarios, goal, taken_time, violation_prob, expected_duration, is_feasible])
-        # print(taken_time)
-        # print(goal)
-        # print(violation_prob)
-        # print(expected_duration)
+    # print(taken_time)
+    # print(goal)
+    # print(violation_prob)
+    # print(expected_duration)
 result_data = pd.DataFrame(np.array(result_data), columns = ['Algorithm', 'Alpha', 'Number_scenarios', 'goal', 'taken_time', 'violation_probability', 'expected_duration', 'is_feasible'])
-result_data.to_csv('results.csv', sep = ';')
+result_data.to_csv('..\\..\\experiments\\results\\Heuristics\\results.csv', sep = ';')
 # expected_times = calculate_expectations(times_distribution)
 # current_node = 0
 # path = [0]

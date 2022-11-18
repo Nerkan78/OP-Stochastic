@@ -1,0 +1,6 @@
+;Algorithm;Alpha;Number_scenarios;goal;taken_time;violation_probability;expected_duration;is_feasible
+0;Heuristic;1e-05;1;558;96.33;0.0;294.778;True
+1;Heuristic;1e-05;1;775;279.047;0.0;596.716;True
+2;Heuristic;1e-05;1;1047;241.138;0.0;899.771;True
+3;Heuristic;1e-05;1;1267;305.774;0.0;1184.584;True
+4;Heuristic;1e-05;1;1247;350.241;0.0;1490.918;True

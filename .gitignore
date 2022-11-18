@@ -1,9 +1,9 @@
 julia_path*
 julia_prob*
 *.zip
-*.npy
-*.pdf
-*.csv
-*.pkl
-*.png
-*.txt
+#*.npy
+#*.pdf
+#*.csv
+#*.pkl
+#*.png
+#*.txt

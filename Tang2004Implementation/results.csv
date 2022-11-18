@@ -1,0 +1,17 @@
+;Algorithm;Alpha;Number_scenarios;goal;taken_time;violation_probability;expected_duration;is_feasible
+0;Heuristic;1e-05;1;37;60.339;0.0;116.696;True
+1;Heuristic;1e-05;2;32;29.326;0.0;87.68;False
+2;Heuristic;1e-05;3;32;30.938;0.001;87.68;False
+3;Heuristic;1e-05;4;32;33.293;0.0;84.67;False
+4;Heuristic;1e-05;5;32;32.904;0.001;87.68;False
+5;Heuristic;1e-05;6;32;34.213;0.002;87.68;False
+6;Heuristic;1e-05;7;32;39.347;0.001;86.17;False
+7;Heuristic;1e-05;8;32;36.986;0.002;87.68;False
+8;Heuristic;0.05;1;37;59.795;0.0;116.696;True
+9;Heuristic;0.05;2;36;42.015;0.05;102.169;False
+10;Heuristic;0.05;3;36;43.586;0.053;102.169;False
+11;Heuristic;0.05;4;36;44.286;0.058;102.169;False
+12;Heuristic;0.05;5;36;46.128;0.062;102.169;False
+13;Heuristic;0.05;6;35;55.846;0.024;97.669;False
+14;Heuristic;0.05;7;36;49.684;0.066;102.169;False
+15;Heuristic;0.05;8;36;50.117;0.068;102.169;False
