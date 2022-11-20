@@ -1,179 +1,142 @@
+import os
+from pathlib import Path
+
 import numpy as np
+import pandas as pd
+
+from Continous import ProblemContinuous
+from Discrete import Problem
 from utils import *
-from operators import *
-# from config import config, EXPERIMENT_NAME, SAVE_RESULTS
+# from operators import *
+from config import create_config, create_graph, create_times, read_TOPTW_file, create_problem
 from time import time
 import pickle
-import argparse
+from utils import sample_from_position
+np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
+import matplotlib.pyplot as plt
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-c', '--config_path', type=str, help='Path to config file')      # option that takes a value
+N_SCENARIOS = 1
+MODE = 'deterministic' if N_SCENARIOS == 1 else 'stochastic'
 
-args = parser.parse_args()
+type = 'discrete'
+results = []
+for dir_name in os.listdir('data/TOPTW'):
+    filename = (os.listdir(f'data/TOPTW/{dir_name}')[0])
+    print(f'data/TOPTW/{dir_name}/{filename}')
+    dirpath = Path(f'data/TOPTW_PROCESSED/{dir_name}')
+    dirpath.mkdir(parents=True, exist_ok=True)
+    _, _, t_max = read_TOPTW_file(f'data/TOPTW/{dir_name}/{filename}',
+                               save_graph=f'data/TOPTW_PROCESSED/{dir_name}/graph_{filename}',
+                               save_times=f'data/TOPTW_PROCESSED/{dir_name}/times_{filename}')
 
-class Particle:
-    def __init__(self, position, velocity, cost, profit, n_points, mode, alpha, id):
-        self.position = position
-        self.velocity = velocity
-        self.pbest = position
-        self.pbest_profit = profit
-        self.n_points = n_points
-        self.cost = cost
-        self.mode = mode
-        self.alpha = alpha
-        self.id = id
+    for n_points in [10]:
+        for w in (0.5,):
+            # for t_max in (450,):
+            for _ in (1, ):
+                for n_particles in (50,):
+                    for velocity_weight in (5e-2, ):
+                        config = create_config(n_points=n_points,
+                                               w=w,
+                                               t_max=t_max,
+                                               n_particles=n_particles,
+                                               n_epoch=50,
+                                               c1=0.3,
+                                               c2 = 0.3,
+                                               load_graph=f'data/TOPTW_PROCESSED/{dir_name}/graph_{filename}',
+                                               load_times=f'data/TOPTW_PROCESSED/{dir_name}/times_{filename}',
+                                               )
+                        if type =='discrete':
+                            random_problem = Problem(**config)
+                        elif type == 'continuous':
+                            random_problem = ProblemContinuous(**config)
 
-    def evaluate(self, profits):
-        current_profit = position_profit(self.position, profits)
-        if self.id == 1:
-            extended_print(self.position)
-        if current_profit > self.pbest_profit:
-            self.pbest = self.position
-            self.pbest_profit = current_profit
-            # print('LOCAL UPDATE')
+                        random_problem.create_population()
 
-    def update(self, weight, c1, c2, gbest, profits, times, T_max, points_coordinates):
+                        num_epoch = config['n_epoch']
+                        history_profit = [deepcopy([]) for i in range(config['n_particles'])]
+                        history_matrix = [deepcopy([]) for i in range(config['n_particles'])]
+                        start_time = time()
+                        print(f'velocity_weight = {velocity_weight}')
+                        for epoch in range(num_epoch):
+                            random_problem.update_population(velocity_weight, history_profit, history_matrix)
+                            # extended_print(random_problem.gbest)
+                            # print(f' ITERATION {epoch}')
 
-        local_update = theta_operator(self.pbest, self.position)
-        local_update = mul_operator(c1, local_update)
+                            # print(f'---- GLOBAL BEST PROFIT {random_problem.gbest_profit} ----')
+                        # print(f'---- GLOBAL BEST PATH SAMPLE {calculate_cost_profit(random_problem.gbest, random_problem.times, random_problem.profits, random_problem.T_max, random_problem.distance)[0]} ----')
+                        # print(f'---- GLOBAL BEST MATRIX \n{random_problem.gbest} ----')
 
-        global_update = theta_operator(gbest, self.position)
-        global_update = mul_operator(c2, global_update)
+                        # print(random_problem.gbest_profit)
 
-        update = add_operator(local_update, global_update, 'LP', 'HP')
-        inertia = mul_operator(weight, self.velocity)
+                        duration = time() - start_time
+                        print(duration)
+                        results.append([f'{dir_name}-{filename}', config['n_points'], t_max, duration, random_problem.gbest_profit])
+                        if type == 'continuous':
+                            sample = sample_from_position(random_problem.gbest,
+                                                          random_problem.profits,
+                                                          random_problem.T_max,
+                                                          random_problem.points_coordinates,
+                                                          random_problem.times,
+                                                          random_problem.mode,
+                                                          random_problem.alpha)
 
-        new_velocity = add_operator(inertia, update, 'NP', 'NP')
+                            print(f'sample best = {sample}')
+                        dirpath = Path(f'results/TOPTW_PROCESSED/{dir_name}')
+                        dirpath.mkdir(parents=True, exist_ok=True)
 
-        new_position, new_cost = insert_operator(self.position, self.cost, new_velocity, profits, times, T_max, points_coordinates, self.mode, self.alpha)
+                        np.savetxt(Path(dirpath, 'history_profit.txt'), np.array(history_profit))
+                        #
+                        # with open (f'results\\history_matrix_npoints={n_points}_w={w}_tmax={t_max}_nparticles={n_particles}_vweight={velocity_weight}.pkl', 'wb') as f:
+                        #     pickle.dump(np.array(history_matrix), f)
 
-        control_list = list(range(1, self.n_points))
-        np.random.shuffle(control_list)
-        new_velocity = theta_operator(control_list, new_position)
+                        # fig, axes = plt.subplots(ncols=3, figsize=(16, 8))
+                        #
+                        # for h in history_profit:
+                        #     axes[0].plot(h)
+                        #     #         axes[i][0].set_yticks(list(range(300, 600, 20)))
+                        #     axes[0].set_title(f'Profit weight={velocity_weight}')
+                        # # Optimal value
+                        # # axes[i][0].axhline(424, xmin=0, xmax=30, linestyle='-.')
+                        # for h in history_matrix:
+                        #     coef = [(hmatrix * (1 - hmatrix)).sum() for hmatrix in h]
+                        #     diff = [np.linalg.norm(diff_matrix) for diff_matrix in np.diff(h)]
+                        #     axes[1].plot(coef)
+                        #     #         axes[i][0].set_yticks(list(range(400, 500, 20)))
+                        #     axes[1].set_title(f'Matrix coefficients  weight={velocity_weight}')
+                        #     axes[2].plot(diff)
+                        #     #         axes[i][0].set_yticks(list(range(400, 500, 20)))
+                        #     axes[2].set_title(f'Matrix difference  weight={velocity_weight}')
+                        # plt.savefig('graphics.png')
+                        # plt.show()
+df = pd.DataFrame(results, columns=['name', 'N', 'T max', 'duration', 'profit'])
+df.to_csv('results/TOPTW_PROCESSED/results')
 
-        self.position = new_position
-        self.velocity = new_velocity
-        self.cost = new_cost
-
-
-
-
-
-
-class Problem:
-    def __init__(self, points_coordinates, profits, T_max, c1, c2, w, n_particles, times, **kwargs):
-        self.points_coordinates = np.array(points_coordinates)
-        self.T_max = T_max
-        self.n_points = len(points_coordinates)
-        self.distance = lambda p1, p2: distance(p1, p2, self.points_coordinates)
-        self.particles = []
-        self.profits = profits
-        self.c1 = c1
-        self.c2 = c2
-        self.w = w
-        self.gbest = []
-        self.gbest_profit = 0
-        self.n_particles = n_particles
-        self.times = times
-        self.mode = kwargs['mode']
-        self.alpha = kwargs['alpha']
-
-    def create_population(self):
-        for i in range(self.n_particles):
-            control_list = list(range(1, self.n_points))
-            np.random.shuffle(control_list)
-            position = []
-            prev_point = 0
-            cost = 0
-            for index, point in enumerate(control_list):
-                # cost += (
-                #         self.distance(prev_point,point)
-                #         + self.distance(point, 0)
-                #         - self.distance(prev_point, 0)
-                # )
-                # cost += self.times[point]
-                # if cost <= self.T_max:
-                #     position.append(point)
-                #     prev_point = point
-                # else:
-                #     cost -= (
-                #         self.distance(prev_point,point)
-                #         + self.distance(point, 0)
-                #         - self.distance(prev_point, 0)
-                # )
-                #     cost -= self.times[point]
-                #     break
-                new_position = deepcopy(position)
-                new_position.append(point)
-                if check_cost(new_position, self.T_max, self.points_coordinates, self.times):
-                    position = deepcopy(new_position)
-                else:
-                    break
-
-            velocity = control_list[index:]
-            # print(f'Created position {position}')
-            self.particles.append(Particle(
-                position, velocity, cost, position_profit(position, self.profits), self.n_points, self.mode, self.alpha, i)
-            )
-
-            self.gbest = position
-            self.gbest_profit = position_profit(position, self.profits)
-            for particle in self.particles:
-                if particle.pbest_profit > self.gbest_profit:
-                    self.gbest_profit = particle.pbest_profit
-                    self.gbest = particle.position
-
-    def update_population(self):
-        for i, particle in enumerate(self.particles):
-            particle.update(self.w, self.c1, self.c2, self.gbest, self.profits, self.times, self.T_max, self.points_coordinates)
-            # particle_cost = position_cost(particle.position, self.points_coordinates)
-            # assert particle_cost <= self.T_max, f'Constraint breach {particle_cost}'
-            particle.evaluate(self.profits)
-            # print(f'---- PARTICLE {i} ----')
-            # print(f'POSITION { particle.position} ----')
-            # print(f'VELOCITY { particle.velocity} ----')
-            # print(f'BEST POSITION { particle.pbest} ----')
-            # print(f'BEST PROFIT { particle.pbest_profit} ----')
-
-        for particle in self.particles:
-            if particle.pbest_profit > self.gbest_profit:
-                self.gbest_profit = particle.pbest_profit
-                self.gbest = particle.position
+    #
 
 
 
-print(args.config_path)
-with open(args.config_path, 'rb') as f:
-    config = pickle.load(f)
+#
+# random_problem = Problem_con(**config)
+# random_problem.create_population()
+#
+# print('---CONTINOUS---')
+#
+# num_epoch = 10
+# history = [[] for i in range(config['n_particles'])]
+# for epoch in range(num_epoch):
+#     random_problem.update_population(history)
+#     # print(random_problem.gbest)
+#     print(f' ITERARTION {epoch}')
+#     print(f'---- GLOBAL BEST PROFIT {random_problem.gbest_profit} ----')
+#     print(f'---- GLOBAL BEST PATH SAMPLE {calculate_cost_profit(random_problem.gbest, random_problem.times, random_problem.profits, random_problem.T_max, random_problem.distance)[0]} ----')
+#     # print(f'---- GLOBAL BEST MATRIX \n{random_problem.gbest} ----')
+#
+#     # print(random_problem.gbest_profit)
+#
+# duration = time() - start_time
+# print(duration)
+#
+# np.savetxt('history.txt', np.array(history))
 
-SAVE_RESULTS = config['save_results']
-EXPERIMENT_NAME = config['experiment_name']
-start_time = time()
-
-random_problem = Problem(**config)
-random_problem.create_population()
-
-num_epoch = config['PSO_num_epoch']
-for epoch in range(num_epoch):
-    random_problem.update_population()
-    print(random_problem.gbest)
-    print(f' ITERATION {epoch}')
-    print(f'---- GLOBAL BEST PROFIT {random_problem.gbest_profit} ----')
-    print(f'---- GLOBAL BEST POSITION {random_problem.gbest} ----')
-    # print(f'---- GLOBAL BEST COST {position_cost(random_problem.gbest, config["times"], config["points_coordinates"])} ----')
-
-    print(random_problem.gbest_profit)
-
-duration = time() - start_time
-print(duration)
-if SAVE_RESULTS:
-    with open(f'..\\experiments\\results\\execution_time_{EXPERIMENT_NAME}.pkl', 'wb') as exec_time_f,\
-        open(f'..\\experiments\\results\\best_path_{EXPERIMENT_NAME}.pkl', 'wb') as path_f,\
-        open(f'..\\experiments\\results\\best_profit_{EXPERIMENT_NAME}.pkl', 'wb') as profit_f,\
-        open(f'..\\experiments\\results\\best_cost_{EXPERIMENT_NAME}.pkl', 'wb') as cost_f:
-        pickle.dump(duration, exec_time_f)
-        pickle.dump(random_problem.gbest, path_f)
-        pickle.dump(random_problem.gbest_profit, profit_f)
-        pickle.dump(position_cost(random_problem.gbest, config["times"], config["points_coordinates"]), cost_f)
 
 

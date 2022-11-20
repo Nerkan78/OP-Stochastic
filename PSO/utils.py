@@ -3,6 +3,8 @@ from copy import deepcopy
 import numpy as np
 
 
+
+
 def distance(point1, point2, points):
     return np.linalg.norm(points[point1] - points[point2])
 

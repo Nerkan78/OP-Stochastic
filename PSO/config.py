@@ -3,6 +3,46 @@ from scipy.spatial import distance_matrix
 import pickle
 
 
+def read_TOPTW_file(filepath, save_graph=None, save_times=None):
+    with open(filepath, 'r') as f:
+        _, _, N, _ = f.readline().strip().split()
+        N = int(N)
+        _ = f.readline()
+        x_coordinates = []
+        y_coordinates = []
+        profits = []
+        t_max = 0
+        times = []
+        for i, line in enumerate(f.readlines()):
+            value = line.strip().split()
+            # print(value)
+            if len(value) == 0:
+                break
+            x = float(value[1])
+            y = float(value[2])
+            service_time = float(value[3])
+            profit = float(value[4])
+            if i == 0:
+                t_max = float(value[-1])
+            x_coordinates.append(float(x))
+            y_coordinates.append(float(y))
+            profits.append(float(profit))
+            times.append([[float(service_time), 1]])
+    points_coordinates = np.vstack((x_coordinates, y_coordinates)).T
+    travel_matrix = distance_matrix(points_coordinates, points_coordinates).tolist()
+    graph_configuration = {'n_points': N,
+                           'points_coordinates': points_coordinates,
+                           'profits': profits,
+                           'travel_matrix': travel_matrix}
+    times_config = {'times': np.array(times)}
+    if save_graph:
+        with open(save_graph, 'wb') as f:
+            pickle.dump(graph_configuration, f)
+    if save_times:
+        with open(save_times, 'wb') as f:
+            pickle.dump(times_config, f)
+    return graph_configuration, times_config, t_max
+
 def create_graph(n_points, x_min, x_max, y_min, y_max, profit_min, profit_max, save_graph=None):
     x_coordinates = np.random.uniform(x_min, x_max, n_points)
     y_coordinates = np.random.uniform(y_min, y_max, n_points)
@@ -17,6 +57,7 @@ def create_graph(n_points, x_min, x_max, y_min, y_max, profit_min, profit_max, s
     if save_graph:
         with open(save_graph, 'wb') as f:
             pickle.dump(graph_configuration, f)
+
     return graph_configuration
 
 
@@ -174,5 +215,5 @@ def create_config(
         #     pickle.dump(config, config_f)
         #
         #
-        # subprocess.call(['python', 'procedure.py', f'--config_path', f'..\\experiments\\data\\config_{EXPERIMENT_NAME}.pkl'], shell=True)
+        # subprocess.call(['python', 'procedure_discrete.py', f'--config_path', f'..\\experiments\\data\\config_{EXPERIMENT_NAME}.pkl'], shell=True)
 
