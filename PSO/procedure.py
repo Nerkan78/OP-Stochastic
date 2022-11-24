@@ -20,8 +20,10 @@ MODE = 'deterministic' if N_SCENARIOS == 1 else 'stochastic'
 
 type = 'discrete'
 results = []
-for dir_name in os.listdir('data/TOPTW'):
-    filename = (os.listdir(f'data/TOPTW/{dir_name}')[0])
+dir_name = 'c_r_rc_100_100'
+for filename in os.listdir(f'data/TOPTW/{dir_name}'):
+    if filename != 'r109.txt':
+        continue
     print(f'data/TOPTW/{dir_name}/{filename}')
     dirpath = Path(f'data/TOPTW_PROCESSED/{dir_name}')
     dirpath.mkdir(parents=True, exist_ok=True)
@@ -33,13 +35,13 @@ for dir_name in os.listdir('data/TOPTW'):
         for w in (0.5,):
             # for t_max in (450,):
             for _ in (1, ):
-                for n_particles in (50,):
+                for n_particles in (25,):
                     for velocity_weight in (5e-2, ):
                         config = create_config(n_points=n_points,
                                                w=w,
                                                t_max=t_max,
                                                n_particles=n_particles,
-                                               n_epoch=50,
+                                               n_epoch=30,
                                                c1=0.3,
                                                c2 = 0.3,
                                                load_graph=f'data/TOPTW_PROCESSED/{dir_name}/graph_{filename}',
@@ -70,7 +72,7 @@ for dir_name in os.listdir('data/TOPTW'):
 
                         duration = time() - start_time
                         print(duration)
-                        results.append([f'{dir_name}-{filename}', config['n_points'], t_max, duration, random_problem.gbest_profit])
+                        results.append([f'{filename}', config['n_points'], t_max, duration, random_problem.gbest_profit])
                         if type == 'continuous':
                             sample = sample_from_position(random_problem.gbest,
                                                           random_problem.profits,
@@ -83,7 +85,7 @@ for dir_name in os.listdir('data/TOPTW'):
                             print(f'sample best = {sample}')
                         dirpath = Path(f'results/TOPTW_PROCESSED/{dir_name}')
                         dirpath.mkdir(parents=True, exist_ok=True)
-
+                        print(random_problem.gbest)
                         np.savetxt(Path(dirpath, 'history_profit.txt'), np.array(history_profit))
                         #
                         # with open (f'results\\history_matrix_npoints={n_points}_w={w}_tmax={t_max}_nparticles={n_particles}_vweight={velocity_weight}.pkl', 'wb') as f:
@@ -109,7 +111,7 @@ for dir_name in os.listdir('data/TOPTW'):
                         # plt.savefig('graphics.png')
                         # plt.show()
 df = pd.DataFrame(results, columns=['name', 'N', 'T max', 'duration', 'profit'])
-df.to_csv('results/TOPTW_PROCESSED/results')
+df.to_csv('results/TOPTW_PROCESSED/results.csv')
 
     #
 
