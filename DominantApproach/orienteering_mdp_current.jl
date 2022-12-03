@@ -146,41 +146,59 @@ end
 
 
 function get_triples(labels, times, ref_index, num_labels)
-# array to keep indices of chosen labels
-    if ref_index > length(labels)
+
+    # border cases
+    if ref_index > length(labels) #|| labels[1].time - times[end] < labels[ref_index].time - times[1]
         return []
     end
     if num_labels == 1
-        return [labels[ref_index]]
+        return [[labels[ref_index]]]
+    end
+
+    if ref_index == 1
+        return [[labels[1] for i in 1:num_labels]]
     end
 
     indices = [ref_index]
     ref_time = labels[ref_index].time - times[1]
 
     extensions = []
-    new_index = 1
-    for i in 1:(num_labels-1)
-        new_index = indices[end]
-        # keep adding labels to extensions until reach the end of the array.
-        # If we reached it and didn't gather enough labels, we return empty array.
-        while new_index > 1 && (labels[new_index].time - times[i+1]) < ref_time
-            new_index -= 1
 
+    new_index = 1
+    prev_index = 1
+
+    # here we are constracting initial lineyka
+    # we add indices of labels from latest time downwards reference index 
+    for i in 1:(num_labels-1)
+
+        while new_index < ref_index && (labels[new_index].time - times[end-i+1]) >= ref_time #&& (labels[new_index+1] - times[end-i+1]) <= ref_time
+          new_index += 1
         end
-        ref_time = min(ref_time, labels[new_index].time - times[i+1])
-        push!(indices, new_index)
+
+        # if we went out of the loop then we either faced reference_index or find first index where we exceeded reference time. If the latter is the case we should decrease index
+        if (new_index == ref_index && labels[new_index].time - times[end-i+1] < ref_time) || new_index < ref_index
+            new_index = max(prev_index, new_index-1)
+        end
+        prev_index = new_index
+        
+        # if we in latest times then we redefine reference time to know real time borders
+        if i == 1
+         ref_time = min(ref_time, labels[new_index].time - times[end])
+        end
+        insert!(indices, 2, new_index)
     end
     current_times = [labels[i].time for i in indices]
-    # current_times[1] = ref_time
+    current_times[1] = ref_time
+
     # with variable denotes first index which do not fall into reference index
     start_index = 2
 
     # we iterate until meet non reference label or until all labels fall into reference
     # maybe we should add here checking that the result time should be nonnegative
-    while current_times[end] >= labels[ref_index].time && (length(labels) == ref_index || current_times[1] >= labels[indices[1]+1].time)
+    while current_times[end] >= labels[ref_index].time && (length(labels) == ref_index || current_times[1] >= labels[indices[1]+1].time-times[1])
         push!(extensions, [labels[i] for i in indices])
 
-        for ind in indices[2:end]
+        for ind in indices[start_index:end]
             if ind >= ref_index
                 start_index += 1
             end
@@ -205,6 +223,7 @@ function get_triples(labels, times, ref_index, num_labels)
             indices[i] += 1
 
         end
+        # shift of lineyka towards first intersection with label
         current_times  .-= min
 
     end
@@ -304,13 +323,13 @@ function run_dynamic_programming(distance, profits, times_distribution, horizon_
         new_labels_were_generated = false
         number_labels_generated = 0
         for point in 1:num_points
-
-            # for labels in with_replacement_combinations(non_dom_labels[point], num_scenarios)
-            # for labels in get_triple(non_dom_labels[point], reference_points_indices[point], num_scenarios-1)
-            #     push!(labels, non_dom_labels[point][reference_points_indices[point]])
-            point_times = sort([scenarios[point][i].time for i in 1:num_scenarios])
             @show reference_points_indices
             generated = false
+            
+            # for labels in with_replacement_combinations(non_dom_labels[point], num_scenarios)
+            # for labels in get_triple(non_dom_labels[point], reference_points_indices[point], num_scenarios-1)
+                # push!(labels, non_dom_labels[point][reference_points_indices[point]])
+            point_times = sort([scenarios[point][i].time for i in 1:num_scenarios])
             for labels in get_triples(non_dom_labels[point], point_times, reference_points_indices[point], num_scenarios)
                 generated=true
             # for labels in get_extension(non_dom_labels[point], num_scenarios)
@@ -405,7 +424,8 @@ function run_dynamic_programming(distance, profits, times_distribution, horizon_
                     # end
                 # end
             end
-            if generated reference_points_indices[point] += 1 end
+            # if generated reference_points_indices[point] += 1 end
+            reference_points_indices[point] += 1
 
         end
         println(number_labels_generated, " new labels generated")

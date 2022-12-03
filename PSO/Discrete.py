@@ -1,4 +1,6 @@
 import numpy as np
+from joblib import Parallel, delayed
+
 from utils import position_profit, extended_print, distance, check_cost
 from operators import *
 from copy import deepcopy
@@ -26,6 +28,7 @@ class Particle:
             self.pbest_profit = current_profit
             # print('LOCAL UPDATE')
         self.profit = current_profit
+        return self
 
     def update(self, weight, c1, c2, gbest, profits, times, T_max, points_coordinates, velocity_weight):
 
@@ -58,6 +61,7 @@ class Particle:
         self.position = new_position
         self.velocity = new_velocity
         self.cost = new_cost
+        return self
 
 
 
@@ -128,6 +132,21 @@ class Problem:
                     self.gbest = particle.position
 
     def update_population(self, velocity_weight, history_profit, history_matrix):
+        # [96, 93, 85, 16, 86, 44, 100, 59, 94, 95, 97, 87, 13]
+        # 299.0
+        # [53, 13, 94, 95, 59, 93, 85, 16, 86, 44, 100, 97, 87]
+        # 302.0
+
+        # new_particles = Parallel(n_jobs=4)(delayed(lambda x : x.update(
+        #                                                                 self.w, self.c1, self.c2,
+        #                                                                 self.gbest,
+        #                                                                 self.profits, self.times, self.T_max, self.points_coordinates,
+        #                                                                 velocity_weight
+        #                                                             ))
+        #                                    (particle) for particle in self.particles)
+        # print(new_particles)
+        # new_particles = Parallel(n_jobs=4)(delayed(lambda x : x.evaluate(self.profits))(particle) for particle in new_particles)
+        # self.particles = new_particles
         for i, particle in enumerate(self.particles):
             particle.update(self.w, self.c1, self.c2, self.gbest, self.profits, self.times, self.T_max, self.points_coordinates, velocity_weight)
             # particle_cost = position_cost(particle.position, self.points_coordinates)

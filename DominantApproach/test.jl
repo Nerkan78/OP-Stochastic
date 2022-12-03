@@ -1,6 +1,6 @@
 a = [[rand(200:800) for i in 1:50]; [rand(0:100) for i in 1:50]]
 
-a = [136, 125, 113, 100, 50]
+a = [119, 118, 113, 100, 50]
 sort!(a, rev=true )
 N_SCENARIOS = 3
 times = [i * 10 for i in 1:N_SCENARIOS]
@@ -27,33 +27,29 @@ function get_triples(labels, times, ref_index, N_SCENARIOS)
   # ref_time = min(ref_time, labels[last_index] - times[end])
   # @show last_index
   new_index = 1
+  prev_index = 1
   for i in 1:(N_SCENARIOS-1)
     # new_index = 1 #indices[end]
     # keep adding labels to extensions until reach the end of the array.
     # If we reached it and didn't gather enough labels, we return empty array.
     while new_index < ref_index && (labels[new_index] - times[end-i+1]) >= ref_time #&& (labels[new_index+1] - times[end-i+1]) <= ref_time
-      println("enter")
-
-      println(labels[new_index] - times[end-i+1])
-      println(labels[new_index+1] - times[end-i+1])
       new_index += 1
       # if new_index < 1
       #   return []
       # end
     end
-    @show new_index
+    if !(new_index == ref_index && labels[new_index] - times[end-i+1] >= ref_time)
+      new_index = max(prev_index, new_index-1)
+    end
+    prev_index = new_index
+
     if i == 1
       ref_time = min(ref_time, labels[new_index] - times[end])
     end
-    if new_index < ref_index && (labels[new_index] - times[end-i+1]) < ref_time
-      new_index -=1
-    end
     insert!(indices, 2, new_index)
   end
-  @show ref_time
   current_times = [labels[i] for i in indices]
   current_times[1] = ref_time
-  @show current_times
   # current_times = current_times .-= (labels[ref_index] - ref_time)
   # with variable denotes first index which do not fall into reference index
   start_index = 2
@@ -62,7 +58,7 @@ function get_triples(labels, times, ref_index, N_SCENARIOS)
   # maybe we should add here checking that the result time should be nonnegative
   @show current_times
   @show indices
-  while current_times[end] >= labels[ref_index] && (length(labels) == ref_index || current_times[1] >= labels[indices[1]+1])
+  while current_times[end] >= labels[ref_index] && (length(labels) == ref_index || current_times[1] >= labels[indices[1]+1]-times[1])
     push!(extensions, [labels[i] for i in indices])
 
     for ind in indices[start_index:end]
@@ -74,6 +70,8 @@ function get_triples(labels, times, ref_index, N_SCENARIOS)
       break
     end
     @show start_index
+    @show current_times
+    @show indices
     # calculating shifts for each label in extension to fall into next value
     shifts = [current_times[i] - labels[indices[i]+1] for i in start_index:N_SCENARIOS]
     indices_to_shift = []

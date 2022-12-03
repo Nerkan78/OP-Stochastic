@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 N_SCENARIOS = 1
 MODE = 'deterministic' if N_SCENARIOS == 1 else 'stochastic'
 
-type = 'discrete'
+type = 'continuous'
 results = []
 dir_name = 'c_r_rc_100_100'
 for filename in os.listdir(f'data/TOPTW/{dir_name}'):
@@ -86,7 +86,10 @@ for filename in os.listdir(f'data/TOPTW/{dir_name}'):
                         dirpath = Path(f'results/TOPTW_PROCESSED/{dir_name}')
                         dirpath.mkdir(parents=True, exist_ok=True)
                         print(random_problem.gbest)
+                        print(random_problem.gbest_profit)
                         np.savetxt(Path(dirpath, 'history_profit.txt'), np.array(history_profit))
+                        # [96, 93, 85, 16, 86, 44, 100, 59, 94, 95, 97, 87, 13]
+                        # 299.0
                         #
                         # with open (f'results\\history_matrix_npoints={n_points}_w={w}_tmax={t_max}_nparticles={n_particles}_vweight={velocity_weight}.pkl', 'wb') as f:
                         #     pickle.dump(np.array(history_matrix), f)

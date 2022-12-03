@@ -18,5 +18,15 @@ with open(f'data/TOPTW_PROCESSED/{dir_name}/graph_{filename}.txt', 'rb') as f:
     graph_config = pickle.load(f)
 with open(f'data/TOPTW_PROCESSED/{dir_name}/times_{filename}.txt', 'rb') as f:
     times_config = pickle.load(f)
-print(position_cost([63,  62,  74,  25,  15,  16,  93,  88,  2,  75,  21], times_config['times'], graph_config['points_coordinates']))
-print(position_profit([63,  62,  74,  25,  15,  16,  93,  88,  2,  75,  21], graph_config['profits']))
+# print(position_cost([63,  62,  74,  25,  15,  16,  93,  88,  2,  75,  21], times_config['times'], graph_config['points_coordinates']))
+# print(position_profit([63,  62,  74,  25,  15,  16,  93,  88,  2,  75,  21], graph_config['profits']))
+
+
+from multiprocessing import Pool
+def f(x):
+    return x*x
+a = [1, 2, 3]
+if __name__ == '__main__':
+    with Pool(5) as p:
+        a = (p.map(f, [1, 2, 3]))
+    print(a)

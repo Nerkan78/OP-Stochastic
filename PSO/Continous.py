@@ -1,4 +1,8 @@
+from copy import deepcopy
+
 import numpy as np
+from joblib import Parallel, delayed
+
 from utils import calculate_cost_profit, normalize, distance
 
 
@@ -18,6 +22,7 @@ class ParticleContinuous:
             self.pbest = self.position
             self.pbest_profit = current_profit
             # print('LOCAL UPDATE')
+        return self
 
     def update(self, w, c1, c2, velocity_weight, gbest, verbose=0):
         r1 = np.random.random()
@@ -42,6 +47,7 @@ class ParticleContinuous:
         self.position = new_position
         self.velocity = new_velocity
         # self.cost = new_cost
+        return self
 
 
 class ProblemContinuous:
@@ -90,11 +96,17 @@ class ProblemContinuous:
                 self.gbest = particle.position
 
     def update_population(self, velocity_weight, history_profit, history_matrix):
+        new_particles = Parallel(n_jobs=8)(delayed(lambda x: x.update(self.w, self.c1, self.c2, velocity_weight,  deepcopy(self.gbest), 0))
+                                           (particle) for particle in self.particles)
+        # print(new_particles)
+        new_particles = Parallel(n_jobs=8)(
+            delayed(lambda x: x.evaluate(deepcopy(self.times), deepcopy(self.profits), deepcopy(self.points_coordinates), self.T_max, self.mode, self.alpha))(particle) for particle in new_particles)
+        self.particles = new_particles
         for i, particle in enumerate(self.particles):
-            particle.update(self.w, self.c1, self.c2, velocity_weight,  self.gbest, 0)
+            # particle.update(self.w, self.c1, self.c2, velocity_weight,  self.gbest, 0)
             # particle_cost = position_cost(particle.position, self.points_coordinates)
             # assert particle_cost <= self.T_max, f'Constraint breach {particle_cost}'
-            particle.evaluate(self.times, self.profits, self.points_coordinates, self.T_max, self.mode, self.alpha)
+            # particle.evaluate(self.times, self.profits, self.points_coordinates, self.T_max, self.mode, self.alpha)
             # if i == 1:
             #     print(f'---- PARTICLE {i} ----')
             #     print(f'  {"     ".join(np.arange(0, self.n_points, 1).astype(str))} \n{particle.position}')
