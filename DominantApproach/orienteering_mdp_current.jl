@@ -20,7 +20,7 @@ struct Label
     visited_points::Vector{Int64}
 end
 
-global num_scenarios = 3
+global num_scenarios = 1
 
 Triple = @match num_scenarios begin
     1 => Tuple{Int64}
@@ -38,7 +38,7 @@ insert_and_dedup!(v::Vector{Label}, x::Label) = (insert!(v, searchsortedfirst(ma
 # insert_and_dedup!(v::Vector{Label}, x::Label) = (splice!(v, searchsorted(map(x -> x.time, v), x.time, rev=true),[x]); v)
 
 
-function read_data()
+global function read_data()
 
     distance = Pickle.load("data\\real\\travel_matrix.pkl")
     distance = convert(Vector{Vector{Float64}}, distance)
@@ -72,8 +72,8 @@ function read_data()
     return (distance, profits, rounded_times_distribution, horizon_length)
 end
 
-# this function extends a triple of labels (states) in the backward direction to another point
-function extend_labels(labels::Vector{Label},  to_point::Int64, scenarios, cur_label_id)
+# this global function extends a triple of labels (states) in the backward direction to another point
+global function extend_labels(labels::Vector{Label},  to_point::Int64, scenarios, cur_label_id)
 
     point = labels[1].point
     # first we should find the time of the extended label
@@ -90,7 +90,7 @@ function extend_labels(labels::Vector{Label},  to_point::Int64, scenarios, cur_l
     return Label(cur_label_id, to_point, time, profit, prev_states, visited_points)
 end
 
-# function get_extension(labels, num_scenarios)
+# global function get_extension(labels, num_scenarios)
 #     l = length(labels)
 #     @match l begin
 #         n::Int, if n<num_scenarios end =>  begin
@@ -111,7 +111,7 @@ end
 #     end
 # end
 
-function get_extension(labels, num_scenarios)
+global function get_extension(labels, num_scenarios)
     l = length(labels)
     @match l begin
         n::Int, if n<num_scenarios end =>  begin
@@ -135,7 +135,7 @@ function get_extension(labels, num_scenarios)
 end
 
 
-function get_triple(labels, reference_index, num_labels)
+global function get_triple(labels, reference_index, num_labels)
     if reference_index == 1
        return [[labels[1] for i in 1:num_labels]]
     else
@@ -145,7 +145,7 @@ end
 
 
 
-function get_triples(labels, times, ref_index, num_labels)
+global function get_triples(labels, times, ref_index, num_labels)
 
     # border cases
     if ref_index > length(labels) #|| labels[1].time - times[end] < labels[ref_index].time - times[1]
@@ -232,8 +232,8 @@ end
 
 
 
-# this function checks whether label1 dominates label2
-function dominates(label1::Label, label2::Label)::Bool
+# this global function checks whether label1 dominates label2
+global function dominates(label1::Label, label2::Label)::Bool
     label1.point != label2.point && return false
 
     label1.time < label2.time && return false
@@ -243,7 +243,7 @@ function dominates(label1::Label, label2::Label)::Bool
     return label1.id < label2.id
 end
 
-function print_non_dominated_label_ids()
+global function print_non_dominated_label_ids()
     for point in 1:num_points
         print("Point ", point, " :")
         for label in non_dom_labels[point]
@@ -253,7 +253,7 @@ function print_non_dominated_label_ids()
     end
 end
 
-function check_time(labels::Vector{Label})::Bool
+global function check_time(labels::Vector{Label})::Bool
     times = map(x -> x.time, labels)
     min_time = min(times...)
     new_times = map(x -> x - min_time, times)
@@ -262,7 +262,7 @@ function check_time(labels::Vector{Label})::Bool
     return all(x -> abs(x) < 200, differences)
 end
 
-function get_paths_dict(label::Label, scenarios)
+global function get_paths_dict(label::Label, scenarios)
 
     #if we have only one previous state, it necessarily corresponds to returning to the depot
     if length(label.prev_states) == 1
@@ -285,14 +285,14 @@ end
 
 
 
-function run_dynamic_programming(distance, profits, times_distribution, horizon_length)
+global function run_dynamic_programming(distance, profits, times_distribution, horizon_length)
 
     #num_points=size(distance, 1) - 1
     num_points = 19
     reference_points_indices = Int.(ones(num_points))
     scenarios = [[Scenario(times_distribution[point][i][2], times_distribution[point][i][1], profits[point]) for i=1:num_scenarios] for point in 2:num_points+1]
 
-    @show scenarios
+    # @show scenarios
     println()
     println()
     TO_PRINT_LABELS = false
@@ -323,12 +323,15 @@ function run_dynamic_programming(distance, profits, times_distribution, horizon_
         new_labels_were_generated = false
         number_labels_generated = 0
         for point in 1:num_points
-            @show reference_points_indices
+            # @show reference_points_indices
             generated = false
             
             # for labels in with_replacement_combinations(non_dom_labels[point], num_scenarios)
+            if reference_points_indices[point] > length(non_dom_labels[point])
+                continue
+            end
             # for labels in get_triple(non_dom_labels[point], reference_points_indices[point], num_scenarios-1)
-                # push!(labels, non_dom_labels[point][reference_points_indices[point]])
+            #     push!(labels, non_dom_labels[point][reference_points_indices[point]])
             point_times = sort([scenarios[point][i].time for i in 1:num_scenarios])
             for labels in get_triples(non_dom_labels[point], point_times, reference_points_indices[point], num_scenarios)
                 generated=true
@@ -428,7 +431,7 @@ function run_dynamic_programming(distance, profits, times_distribution, horizon_
             reference_points_indices[point] += 1
 
         end
-        println(number_labels_generated, " new labels generated")
+        # println(number_labels_generated, " new labels generated")
     end
 
     println("Number of scenarios is ", num_scenarios)
@@ -445,28 +448,47 @@ function run_dynamic_programming(distance, profits, times_distribution, horizon_
 
 end
 
-start_time = time()
+durations = []
+for n_s in 1:8
+    global num_scenarios
+    num_scenarios = n_s
 
-(distance, profits, times_distribution, horizon_length) = read_data()
+    (distance, profits, times_distribution, horizon_length) = read_data()
+    global distance
+    global profits 
+    global times_distribution
+    global horizon_length
 
-# (best_profit, paths_dict) = run_dynamic_programming(distance, profits, times_distribution, horizon_length)
-best_profit = run_dynamic_programming(distance, profits, times_distribution, horizon_length)
+    start_time = time()
 
 
-@printf("Best solution with profit : %.3f\n", best_profit)
-# global some_path
-# for (k, (path, prob)) in enumerate(paths_dict)
-#     print("Path ", k, " 0")
-#     for index in length(path):-1:1
-#         print(" -> ", path[index])
-#     end
-#     #Pickle.store("julia_path_$(num_scenarios)_$k", path)
-#     #Pickle.store("julia_prob_$(num_scenarios)_$k", prob)
-#     global some_path = path
-#     @printf(" with probability %.3f\n", prob)
-# end
-println(time() - start_time)
+    # (best_profit, paths_dict) = run_dynamic_programming(distance, profits, times_distribution, horizon_length)
+    best_profit = run_dynamic_programming(distance, profits, times_distribution, horizon_length)
 
+
+    @printf("Best solution with profit : %.3f\n", best_profit)
+    # global some_path
+    # for (k, (path, prob)) in enumerate(paths_dict)
+    #     print("Path ", k, " 0")
+    #     for index in length(path):-1:1
+    #         print(" -> ", path[index])
+    #     end
+    #     #Pickle.store("julia_path_$(num_scenarios)_$k", path)
+    #     #Pickle.store("julia_prob_$(num_scenarios)_$k", prob)
+    #     global some_path = path
+    #     @printf(" with probability %.3f\n", prob)
+    # end
+    duration = time() - start_time
+    println(duration)
+    push!(durations, duration)
+end
+# # max_num_scenarios = 1
+df = DataFrame(
+               Number_scenarios = 1:8,
+               durations = durations,
+               )
+
+CSV.write("duration_dependency_work.csv", df, delim=';')
 # println(some_path)
 
 

@@ -96,10 +96,10 @@ class ProblemContinuous:
                 self.gbest = particle.position
 
     def update_population(self, velocity_weight, history_profit, history_matrix):
-        new_particles = Parallel(n_jobs=8)(delayed(lambda x: x.update(self.w, self.c1, self.c2, velocity_weight,  deepcopy(self.gbest), 0))
+        new_particles = Parallel(n_jobs=20)(delayed(lambda x: x.update(self.w, self.c1, self.c2, velocity_weight,  deepcopy(self.gbest), 0))
                                            (particle) for particle in self.particles)
         # print(new_particles)
-        new_particles = Parallel(n_jobs=8)(
+        new_particles = Parallel(n_jobs=20)(
             delayed(lambda x: x.evaluate(deepcopy(self.times), deepcopy(self.profits), deepcopy(self.points_coordinates), self.T_max, self.mode, self.alpha))(particle) for particle in new_particles)
         self.particles = new_particles
         for i, particle in enumerate(self.particles):
